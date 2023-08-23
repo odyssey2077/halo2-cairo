@@ -33,7 +33,7 @@ pub trait CairoVM<F: ScalarField, const NUM_CPU_CYCLES: usize> {
     fn state_transition(
         &self,
         ctx: &mut Context<F>,
-        memory: Vec<AssignedValue<F>>,
+        memory: &[AssignedValue<F>],
         pc: AssignedValue<F>,
         ap: AssignedValue<F>,
         fp: AssignedValue<F>,
@@ -112,16 +112,17 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoChip<F, NUM_CPU_CYCLES> {
     pub fn read_memory(
         &self,
         ctx: &mut Context<F>,
-        memory: Vec<AssignedValue<F>>,
+        memory: &[AssignedValue<F>],
         address: AssignedValue<F>,
     ) -> AssignedValue<F> {
-        self.gate_chip.select_from_idx(ctx, memory, address)
+        self.gate_chip
+            .select_from_idx(ctx, memory.iter().copied(), address)
     }
 
     pub fn compute_op0(
         &self,
         ctx: &mut Context<F>,
-        memory: Vec<AssignedValue<F>>,
+        memory: &[AssignedValue<F>],
         op0_reg: AssignedValue<F>, // one bit
         ap: AssignedValue<F>,
         fp: AssignedValue<F>,
@@ -129,8 +130,8 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoChip<F, NUM_CPU_CYCLES> {
     ) -> AssignedValue<F> {
         let ap_plus_off_op0 = self.gate_chip.add(ctx, ap, off_op0);
         let fp_plus_off_op0 = self.gate_chip.add(ctx, fp, off_op0);
-        let op0_0 = self.read_memory(ctx, memory.clone(), ap_plus_off_op0);
-        let op_0_1 = self.read_memory(ctx, memory.clone(), fp_plus_off_op0);
+        let op0_0 = self.read_memory(ctx, memory, ap_plus_off_op0);
+        let op_0_1 = self.read_memory(ctx, memory, fp_plus_off_op0);
         let op0 = self.gate_chip.select(ctx, op_0_1, op0_0, op0_reg);
         op0
     }
@@ -139,7 +140,7 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoChip<F, NUM_CPU_CYCLES> {
     pub fn compute_op1_and_instruction_size(
         &self,
         ctx: &mut Context<F>,
-        memory: Vec<AssignedValue<F>>,
+        memory: &[AssignedValue<F>],
         op1_src: AssignedValue<F>,
         op0: AssignedValue<F>,
         off_op1: AssignedValue<F>,
@@ -157,11 +158,11 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoChip<F, NUM_CPU_CYCLES> {
         let ap_off_op1 = self.gate_chip.add(ctx, ap, off_op1);
 
         let op1_values: Vec<QuantumCell<F>> = vec![
-            Existing(self.read_memory(ctx, memory.clone(), op0_off_op1)),
-            Existing(self.read_memory(ctx, memory.clone(), pc_off_op1)),
-            Existing(self.read_memory(ctx, memory.clone(), fp_off_op1)),
+            Existing(self.read_memory(ctx, memory, op0_off_op1)),
+            Existing(self.read_memory(ctx, memory, pc_off_op1)),
+            Existing(self.read_memory(ctx, memory, fp_off_op1)),
             Witness(F::zero()), // undefined behavior
-            Existing(self.read_memory(ctx, memory.clone(), ap_off_op1)),
+            Existing(self.read_memory(ctx, memory, ap_off_op1)),
         ];
         let instruction_values = vec![
             Constant(F::one()),
@@ -211,7 +212,7 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoChip<F, NUM_CPU_CYCLES> {
     pub fn compute_dst(
         &self,
         ctx: &mut Context<F>,
-        memory: Vec<AssignedValue<F>>,
+        memory: &[AssignedValue<F>],
         ap: AssignedValue<F>,
         fp: AssignedValue<F>,
         off_dst: AssignedValue<F>,
@@ -219,9 +220,9 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoChip<F, NUM_CPU_CYCLES> {
     ) -> AssignedValue<F> {
         let is_dst_reg_zero = self.gate_chip.is_zero(ctx, dst_reg);
         let address_a = self.gate_chip.add(ctx, ap, off_dst);
-        let var_a = self.read_memory(ctx, memory.clone(), address_a);
+        let var_a = self.read_memory(ctx, memory, address_a);
         let address_b = self.gate_chip.add(ctx, fp, off_dst);
-        let var_b = self.read_memory(ctx, memory.clone(), address_b);
+        let var_b = self.read_memory(ctx, memory, address_b);
         let dst = self.gate_chip.select(ctx, var_a, var_b, is_dst_reg_zero);
         dst
     }
@@ -340,16 +341,18 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoVM<F, NUM_CPU_CYCLES>
     fn state_transition(
         &self,
         ctx: &mut Context<F>,
-        memory: Vec<AssignedValue<F>>,
+        memory: &[AssignedValue<F>],
         pc: AssignedValue<F>,
         ap: AssignedValue<F>,
         fp: AssignedValue<F>,
     ) -> (AssignedValue<F>, AssignedValue<F>, AssignedValue<F>) {
-        let instruction = self.gate_chip.select_from_idx(ctx, memory.to_vec(), pc);
+        let instruction = self
+            .gate_chip
+            .select_from_idx(ctx, memory.iter().copied(), pc);
         let decoded_instruction = self.decode_instruction(ctx, instruction);
         let op0 = self.compute_op0(
             ctx,
-            memory.clone(),
+            memory,
             decoded_instruction.op0_reg,
             ap,
             fp,
@@ -357,7 +360,7 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoVM<F, NUM_CPU_CYCLES>
         );
         let (op1, instruction_size) = self.compute_op1_and_instruction_size(
             ctx,
-            memory.clone(),
+            memory,
             decoded_instruction.op1_src,
             op0,
             decoded_instruction.off_op1,
@@ -374,7 +377,7 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoVM<F, NUM_CPU_CYCLES>
         );
         let dst = self.compute_dst(
             ctx,
-            memory.clone(),
+            memory,
             ap,
             fp,
             decoded_instruction.off_dst,
@@ -422,7 +425,7 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoVM<F, NUM_CPU_CYCLES>
                 .collect::<Vec<_>>(),
         );
         for _ in 0..NUM_CPU_CYCLES {
-            (pc, ap, fp) = self.state_transition(ctx, memory.clone(), pc, ap, fp);
+            (pc, ap, fp) = self.state_transition(ctx, &memory, pc, ap, fp);
         }
     }
 }

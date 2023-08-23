@@ -27,7 +27,7 @@ fn state_transition_test<F: ScalarField>(
     let [pc, ap, fp] = [pc, ap, fp].map(|x| ctx.load_witness(x));
     let memory = ctx.assign_witnesses(memory);
 
-    let (next_pc, next_ap, next_fp) = cario_chip.state_transition(ctx, memory, pc, ap, fp);
+    let (next_pc, next_ap, next_fp) = cario_chip.state_transition(ctx, &memory, pc, ap, fp);
     assert_eq!(*next_pc.value(), expected_next_pc);
     assert_eq!(*next_ap.value(), expected_next_ap);
     assert_eq!(*next_fp.value(), expected_next_fp);
