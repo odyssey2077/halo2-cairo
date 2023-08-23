@@ -28,7 +28,7 @@ pub struct DecodedInstruction<F: ScalarField> {
     op_code: AssignedValue<F>,
 }
 
-pub trait CairoVM<F: ScalarField> {
+pub trait CairoVM<F: ScalarField, const NUM_CPU_CYCLES: usize> {
     fn vm(&self, ctx: &mut Context<F>, cario_state: CarioState);
     fn state_transition(
         &self,
@@ -41,11 +41,11 @@ pub trait CairoVM<F: ScalarField> {
 }
 
 #[derive(Clone, Debug)]
-pub struct CairoChip<F: ScalarField> {
+pub struct CairoChip<F: ScalarField, const NUM_CPU_CYCLES: usize> {
     pub gate_chip: GateChip<F>,
 }
 
-impl<F: ScalarField> CairoChip<F> {
+impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoChip<F, NUM_CPU_CYCLES> {
     pub fn new() -> Self {
         Self {
             gate_chip: GateChip::<F>::default(),
@@ -334,7 +334,9 @@ impl<F: ScalarField> CairoChip<F> {
     }
 }
 
-impl<F: ScalarField> CairoVM<F> for CairoChip<F> {
+impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoVM<F, NUM_CPU_CYCLES>
+    for CairoChip<F, NUM_CPU_CYCLES>
+{
     fn state_transition(
         &self,
         ctx: &mut Context<F>,
@@ -409,7 +411,6 @@ impl<F: ScalarField> CairoVM<F> for CairoChip<F> {
     }
 
     fn vm(&self, ctx: &mut Context<F>, cario_state: CarioState) {
-        let num_clock_cycles = 3;
         let mut fp = ctx.load_witness(F::from_str_vartime(&cario_state.fp).unwrap());
         let mut ap = ctx.load_witness(F::from_str_vartime(&cario_state.ap).unwrap());
         let mut pc = ctx.load_witness(F::from_str_vartime(&cario_state.pc).unwrap());
@@ -420,7 +421,7 @@ impl<F: ScalarField> CairoVM<F> for CairoChip<F> {
                 .map(|x| F::from_str_vartime(x).unwrap())
                 .collect::<Vec<_>>(),
         );
-        for _ in 0..num_clock_cycles {
+        for _ in 0..NUM_CPU_CYCLES {
             (pc, ap, fp) = self.state_transition(ctx, memory.clone(), pc, ap, fp);
         }
     }

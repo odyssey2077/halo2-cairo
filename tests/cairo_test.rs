@@ -22,7 +22,7 @@ fn state_transition_test<F: ScalarField>(
     expected_next_ap: F,
     expected_next_fp: F,
 ) {
-    let cario_chip = CairoChip::<F>::new();
+    let cario_chip = CairoChip::<F, 10>::new();
 
     let [pc, ap, fp] = [pc, ap, fp].map(|x| ctx.load_witness(x));
     let memory = ctx.assign_witnesses(memory);
@@ -36,7 +36,7 @@ fn state_transition_test<F: ScalarField>(
 fn generate_test_data_for_fibonacci_program<F: ScalarField>() -> (Vec<F>, Vec<[F; 3]>) {
     // [0x48307ffe7fff8000, 0x010780017fff7fff, -1, 1, 2, 3]
     // section 3.1 of cairo paper
-    let mut memory = vec![
+    let memory = vec![
         "5201798300658794496",
         "74168662805676031",
         "21888242871839275222246405745257275088548364400416034343698204186575808495616",
@@ -49,7 +49,7 @@ fn generate_test_data_for_fibonacci_program<F: ScalarField>() -> (Vec<F>, Vec<[F
     .map(|x| F::from_str_vartime(x).unwrap())
     .collect();
 
-    let mut register_traces = vec![
+    let register_traces = vec![
         [F::from(0u64), F::from(5u64), F::from(5u64)],
         [F::from(1u64), F::from(6u64), F::from(5u64)],
         [F::from(0u64), F::from(6u64), F::from(5u64)],
@@ -63,7 +63,7 @@ fn generate_test_data_for_fibonacci_program_with_wrong_registers<F: ScalarField>
 ) -> (Vec<F>, Vec<[F; 3]>) {
     // [0x48307ffe7fff8000, 0x010780017fff7fff, -1, 1, 2, 3]
     // section 3.1 of cairo paper
-    let mut memory = vec![
+    let memory = vec![
         "5201798300658794496",
         "74168662805676031",
         "21888242871839275222246405745257275088548364400416034343698204186575808495616",
@@ -76,7 +76,7 @@ fn generate_test_data_for_fibonacci_program_with_wrong_registers<F: ScalarField>
     .map(|x| F::from_str_vartime(x).unwrap())
     .collect();
 
-    let mut register_traces = vec![
+    let register_traces = vec![
         [F::from(0u64), F::from(5u64), F::from(5u64)],
         [F::from(1u64), F::from(6u64), F::from(5u64)],
         [F::from(0u64), F::from(6u64), F::from(5u64)],
