@@ -7,7 +7,7 @@ use halo2_base::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CarioState {
+pub struct CairoState {
     pub memory: Vec<String>,
     pub pc: String,
     pub ap: String,
@@ -29,7 +29,7 @@ pub struct DecodedInstruction<F: ScalarField> {
 }
 
 pub trait CairoVM<F: ScalarField, const NUM_CPU_CYCLES: usize> {
-    fn vm(&self, ctx: &mut Context<F>, cario_state: CarioState);
+    fn vm(&self, ctx: &mut Context<F>, cairo_state: CairoState);
     fn state_transition(
         &self,
         ctx: &mut Context<F>,
@@ -413,12 +413,12 @@ impl<F: ScalarField, const NUM_CPU_CYCLES: usize> CairoVM<F, NUM_CPU_CYCLES>
         (next_pc, next_ap, next_fp)
     }
 
-    fn vm(&self, ctx: &mut Context<F>, cario_state: CarioState) {
-        let mut fp = ctx.load_witness(F::from_str_vartime(&cario_state.fp).unwrap());
-        let mut ap = ctx.load_witness(F::from_str_vartime(&cario_state.ap).unwrap());
-        let mut pc = ctx.load_witness(F::from_str_vartime(&cario_state.pc).unwrap());
+    fn vm(&self, ctx: &mut Context<F>, cairo_state: CairoState) {
+        let mut fp = ctx.load_witness(F::from_str_vartime(&cairo_state.fp).unwrap());
+        let mut ap = ctx.load_witness(F::from_str_vartime(&cairo_state.ap).unwrap());
+        let mut pc = ctx.load_witness(F::from_str_vartime(&cairo_state.pc).unwrap());
         let memory = ctx.assign_witnesses(
-            cario_state
+            cairo_state
                 .memory
                 .iter()
                 .map(|x| F::from_str_vartime(x).unwrap())
