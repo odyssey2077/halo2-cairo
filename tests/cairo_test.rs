@@ -10,7 +10,7 @@ use halo2_base::Context;
 use halo2_cairo::cairo::CairoChip;
 use halo2_cairo::cairo::CairoVM;
 
-const DEGREE: u32 = 10;
+const DEGREE: u32 = 11;
 
 fn state_transition_test<F: ScalarField>(
     ctx: &mut Context<F>,
