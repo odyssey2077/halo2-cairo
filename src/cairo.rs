@@ -660,17 +660,7 @@ impl<F: ScalarField, const MAX_CPU_CYCLES: usize> CairoVM<F, MAX_CPU_CYCLES>
         AssignedValue<F>,
         AssignedValue<F>,
     ) {
-        // let mut fp = ctx.load_witness(F::from_str_vartime(&cairo_state.fp).unwrap());
-        // let mut ap = ctx.load_witness(F::from_str_vartime(&cairo_state.ap).unwrap());
-        // let mut pc = ctx.load_witness(F::from_str_vartime(&cairo_state.pc).unwrap());
         let mut is_valid_transition = ctx.load_constant(F::one());
-        // let memory = ctx.assign_witnesses(
-        //     cairo_state
-        //         .memory
-        //         .iter()
-        //         .map(|x| F::from_str_vartime(x).unwrap())
-        //         .collect::<Vec<_>>(),
-        // );
         for i in 0..MAX_CPU_CYCLES {
             let current_step = Constant(self.range_chip.gate().get_field_element(i as u64));
             // assume MAX_CPU_CYCLES < 2^10
