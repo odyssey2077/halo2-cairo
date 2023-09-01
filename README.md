@@ -41,7 +41,7 @@ LOOKUP_BITS=10 cargo run --example cairo_program_with_builtin -- --name cairo_pr
 
 ### Proof verification
 
-After you have generated the proving and verifying keys, you can generate a proof using
+After you have generated the proving and verifying keys, you can verify a proof using
 
 ```bash
 LOOKUP_BITS=10 cargo run --example cairo_program_with_builtin -- --name cairo_program_with_builtin -k 11 verify
