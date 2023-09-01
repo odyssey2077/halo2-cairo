@@ -21,6 +21,7 @@ num-bigint = { version = "0.4", features = ["rand"] }
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2.git", tag = "v2023_02_02"}
 # Axiom's helper API with basic functions 
 halo2-base = { git = "https://github.com/axiom-crypto/halo2-lib", branch = "community-edition" }
+halo2-scaffold = {git = "https://github.com/axiom-crypto/halo2-scaffold", branch = "main"}
 
 [dev-dependencies]
 test-log = "0.2.11"

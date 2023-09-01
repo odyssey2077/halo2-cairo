@@ -1,0 +1,7 @@
+/target
+/Cargo.lock
+*.pk
+*.snark
+*.vk
+params/
+configs/

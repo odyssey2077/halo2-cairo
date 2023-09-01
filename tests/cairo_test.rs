@@ -5,15 +5,13 @@ use halo2_base::gates::builder::{
     CircuitBuilderStage, GateThreadBuilder, MultiPhaseThreadBreakPoints, RangeCircuitBuilder,
 };
 use halo2_base::halo2_proofs::{dev::MockProver, halo2curves::bn256::Fr};
-use halo2_base::utils::biguint_to_fe;
-use halo2_base::utils::modulus;
 use halo2_base::utils::ScalarField;
 use halo2_base::Context;
 use halo2_cairo::cairo::CairoChip;
 use halo2_cairo::cairo::CairoVM;
-use num_bigint::BigUint;
+use halo2_cairo::generate_test_data_for_program_with_builtin;
+use halo2_cairo::MAX_NUM_CYCLES;
 const DEGREE: u32 = 11;
-const MAX_NUM_CYCLES: usize = 40;
 
 fn state_transition_test<F: ScalarField>(
     ctx: &mut Context<F>,
@@ -51,6 +49,7 @@ fn vm_test<F: ScalarField>(
 
     let [pc, ap, fp] = [pc, ap, fp].map(|x| ctx.load_witness(x));
     let memory = ctx.assign_witnesses(memory);
+    let num_cycles = ctx.load_witness(num_cycles);
 
     let (final_pc, final_ap, final_fp, is_valid_transition) =
         cairo_chip.vm(ctx, &memory, pc, ap, fp, num_cycles);
@@ -85,77 +84,6 @@ fn generate_test_data_for_fibonacci_program<F: ScalarField>() -> (Vec<F>, Vec<[F
         [F::from(1u64), F::from(6u64), F::from(5u64)],
         [F::from(0u64), F::from(6u64), F::from(5u64)],
         [F::from(1u64), F::from(7u64), F::from(5u64)],
-    ];
-
-    (memory, register_traces)
-}
-
-fn generate_test_data_for_program_with_builtin<F: ScalarField>() -> (Vec<F>, Vec<[F; 3]>) {
-    // This is a test for a longer program, involving builtins, imports and outputs
-    // One can generate more tests here: https://www.cairo-lang.org/playground/
-    /*
-    %builtins output
-    from starkware.cairo.common.serialize import serialize_word
-    func main{output_ptr : felt*}():
-        tempvar x = 10
-        tempvar y = x + x
-        tempvar z = y * y + x
-        serialize_word(x)
-        serialize_word(y)
-        serialize_word(z)
-        return ()
-    end
-    */
-    let memory = vec![
-        F::from(0), // dumb entry
-        F::from(0x400380007ffc7ffd),
-        F::from(0x482680017ffc8000),
-        F::from(1),
-        F::from(0x208b7fff7fff7ffe),
-        F::from(0x480680017fff8000),
-        F::from(10),
-        F::from(0x48307fff7fff8000),
-        F::from(0x48507fff7fff8000),
-        F::from(0x48307ffd7fff8000),
-        F::from(0x480a7ffd7fff8000),
-        F::from(0x48127ffb7fff8000),
-        F::from(0x1104800180018000),
-        biguint_to_fe(&(modulus::<F>() - BigUint::from(11u16))),
-        F::from(0x48127ff87fff8000),
-        F::from(0x1104800180018000),
-        biguint_to_fe(&(modulus::<F>() - BigUint::from(14u16))),
-        F::from(0x48127ff67fff8000),
-        F::from(0x1104800180018000),
-        biguint_to_fe(&(modulus::<F>() - BigUint::from(17u16))),
-        F::from(0x208b7fff7fff7ffe),
-        F::from(41), // beginning of outputs
-        F::from(44), // end of outputs
-        F::from(44), // input
-        F::from(10),
-        F::from(20),
-        F::from(400),
-        F::from(410),
-        F::from(41),
-        F::from(10),
-        F::from(24),
-        F::from(14),
-        F::from(42),
-        F::from(20),
-        F::from(24),
-        F::from(17),
-        F::from(43),
-        F::from(410),
-        F::from(24),
-        F::from(20),
-        F::from(44),
-        F::from(10), // output starts here
-        F::from(20),
-        F::from(410),
-    ];
-
-    let register_traces = vec![
-        [F::from(5u64), F::from(24u64), F::from(24u64)],
-        [F::from(20u64), F::from(41u64), F::from(24u64)],
     ];
 
     (memory, register_traces)
@@ -311,7 +239,7 @@ fn test_cairo_fibonacci_program() {
 
 #[test]
 fn test_cairo_vm_program_with_builtin() {
-    let (memory, register_traces) = generate_test_data_for_program_with_builtin::<Fr>();
+    let (memory, register_traces, num_cycles) = generate_test_data_for_program_with_builtin::<Fr>();
     let (pc, ap, fp) = (
         register_traces[0][0],
         register_traces[0][1],
@@ -326,7 +254,7 @@ fn test_cairo_vm_program_with_builtin() {
         pc,
         ap,
         fp,
-        Fr::from(20), // on cairo playground number of steps is 21
+        Fr::from(num_cycles as u64), // on cairo playground number of steps is 21
         memory.clone(),
         final_pc,
         final_ap,
