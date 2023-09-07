@@ -178,7 +178,7 @@ pub fn run_mock_prover_for(path: &str) {
       pc,
       ap,
       fp,
-      Fr::from(steps),
+      Fr::from(steps-1),
       memory.clone(),
       final_pc,
       final_ap,
