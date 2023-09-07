@@ -60,11 +60,11 @@ fn state_transition_circuit(
 
     let circuit = match stage {
         CircuitBuilderStage::Mock => {
-            builder.config(DEGREE as usize, None);
+            builder.config(DEGREE as usize, Some(20));
             RangeCircuitBuilder::mock(builder)
         }
         CircuitBuilderStage::Keygen => {
-            builder.config(DEGREE as usize, None);
+            builder.config(DEGREE as usize, Some(20));
             RangeCircuitBuilder::keygen(builder)
         }
         CircuitBuilderStage::Prover => RangeCircuitBuilder::prover(builder, break_points.unwrap()),
@@ -77,12 +77,22 @@ fn state_transition_circuit(
 struct Res {
     memory: BTreeMap<String, String>,
     trace: Vec<BTreeMap<String, u64>>,
+    output: String,
 }
 
-fn read_data(path: &str) -> (Vec<Fr>, Vec<[Fr; 3]>) {
+fn extract_steps(s: &str) -> Option<u64> {
+    let reg = regex::Regex::new(r".*steps: ([0-9]+)\n.*").unwrap();
+    reg.captures(s).and_then(|c| c.get(1).or(None).map(|h| {
+        println!("{:?}", h.as_str());
+        return h.as_str().parse::<u64>().unwrap();
+}))
+}
+
+fn read_data(path: &str) -> (Vec<Fr>, Vec<[Fr; 3]>, u64) {
   let json = format!("{}/res.json", path);
   let contents = read_to_string(json).expect("Should have been able to read the file");
   let res: Res = serde_json::from_str(&contents).expect("Failed to parse JSON");
+  let steps = extract_steps(&res.output).expect("extract steps from output");
   let mut sorted_memory_pairs = Vec::from_iter(res.memory.clone());
   sorted_memory_pairs.sort_by(|a, b| {
     let a_int = a.0.parse::<i32>().unwrap();
@@ -116,7 +126,7 @@ fn read_data(path: &str) -> (Vec<Fr>, Vec<[Fr; 3]>) {
       [Fr::from(*m.get("pc").unwrap()), Fr::from(*m.get("ap").unwrap()), Fr::from(*m.get("fp").unwrap())]
   }).collect();
   memory.insert(0, Fr::from(0));
-  return (memory, trace);
+  return (memory, trace, steps);
 }
 
 pub fn run_mock_prover(memory: Vec<Fr>,register_traces: Vec<[Fr; 3]>) {
@@ -151,7 +161,7 @@ pub fn run_mock_prover(memory: Vec<Fr>,register_traces: Vec<[Fr; 3]>) {
 }
 
 pub fn run_mock_prover_for(path: &str) {
-    let (memory, register_traces) = read_data(path);
+    let (memory, register_traces, steps) = read_data(path);
     let first_trace = register_traces[0];
     let last_trace = register_traces.last().unwrap();
     let (pc, ap, fp) = (
@@ -168,7 +178,7 @@ pub fn run_mock_prover_for(path: &str) {
       pc,
       ap,
       fp,
-      Fr::from(20), // on cairo playground number of steps is 21
+      Fr::from(steps),
       memory.clone(),
       final_pc,
       final_ap,

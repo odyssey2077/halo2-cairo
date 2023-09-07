@@ -17,6 +17,7 @@ num-bigint = { version = "0.4" }
 # Axiom's helper API with basic functions 
 halo2-base = { git = "https://github.com/axiom-crypto/halo2-lib", branch = "community-edition" }
 halo2-scaffold = {git = "https://github.com/axiom-crypto/halo2-scaffold", branch = "main"}
+regex = "1.9.5"
 
 [dev-dependencies]
 test-log = "0.2.11"
