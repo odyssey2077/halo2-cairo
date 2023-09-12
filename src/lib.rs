@@ -1,16 +1,17 @@
 #![allow(incomplete_features)]
 
 pub mod cairo;
+pub mod cairo_circuit;
 
 use halo2_base::utils::biguint_to_fe;
 use halo2_base::utils::modulus;
-use halo2_base::utils::ScalarField;
+use halo2_base::utils::BigPrimeField;
 use num_bigint::BigUint;
 
 pub const MAX_NUM_CYCLES: usize = 40;
 
-pub fn generate_test_data_for_program_with_builtin<F: ScalarField>() -> (Vec<F>, Vec<[F; 3]>, usize)
-{
+pub fn generate_test_data_for_program_with_builtin<F: BigPrimeField>(
+) -> (Vec<F>, Vec<[F; 3]>, usize) {
     // This is a test for a longer program, involving builtins, imports and outputs
     // One can generate more tests here: https://www.cairo-lang.org/playground/
     /*

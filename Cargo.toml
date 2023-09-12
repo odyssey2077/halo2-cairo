@@ -13,10 +13,10 @@ env_logger = "0.10"
 clap = { version = "4.1", features = ["derive"] }
 test-case = "3.1.0"
 num-bigint = { version = "0.4" }
+rand = "0.8"
 
 # Axiom's helper API with basic functions 
-halo2-base = { git = "https://github.com/axiom-crypto/halo2-lib", branch = "community-edition" }
-halo2-scaffold = {git = "https://github.com/axiom-crypto/halo2-scaffold", branch = "main"}
+halo2-base = { git = "https://github.com/axiom-crypto/halo2-lib", branch = "develop" }
 regex = "1.9.5"
 
 [dev-dependencies]
