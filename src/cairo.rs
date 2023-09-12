@@ -113,10 +113,20 @@ impl<F: ScalarField, const MAX_CPU_CYCLES: usize> CairoChip<F, MAX_CPU_CYCLES> {
         instruction: AssignedValue<F>,
     ) -> DecodedInstruction<F> {
         let instruction_bits = self.range_chip.gate().num_to_bits(ctx, instruction, 63);
+        println!(
+            "instruction_bits: {:?}",
+            instruction_bits
+                .clone()
+                .iter()
+                .map(|x| (x.value().clone() == F::one()) as i32)
+                .collect::<Vec<_>>()
+        );
         let off_dst_raw = self.bit_slice(ctx, &instruction_bits, 0, 16);
         let off_dst = self.bias(ctx, off_dst_raw);
         let off_op0_raw = self.bit_slice(ctx, &instruction_bits, 16, 32);
+        println!("off_op0_raw: {:?}", off_op0_raw);
         let off_op0 = self.bias(ctx, off_op0_raw);
+        println!("off_op0: {:?}", off_op0);
         let off_op1_raw = self.bit_slice(ctx, &instruction_bits, 32, 48);
         let off_op1 = self.bias(ctx, off_op1_raw);
         let dst_reg = instruction_bits[48];
@@ -190,6 +200,7 @@ impl<F: ScalarField, const MAX_CPU_CYCLES: usize> CairoChip<F, MAX_CPU_CYCLES> {
         assert!(fe_to_biguint(op1_src.value()) != 3u64.into());
         assert!(fe_to_biguint(op1_src.value()) <= 4u64.into());
 
+        println!("op1_src: {:?}", op1_src);
         let op0_off_op1 = self.range_chip.gate().add(ctx, op0, off_op1);
         let pc_off_op1 = self.range_chip.gate().add(ctx, pc, off_op1);
         let fp_off_op1 = self.range_chip.gate().add(ctx, fp, off_op1);
