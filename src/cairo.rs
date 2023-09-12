@@ -164,9 +164,13 @@ impl<F: ScalarField, const MAX_CPU_CYCLES: usize> CairoChip<F, MAX_CPU_CYCLES> {
     ) -> AssignedValue<F> {
         let ap_plus_off_op0 = self.range_chip.gate().add(ctx, ap, off_op0);
         let fp_plus_off_op0 = self.range_chip.gate().add(ctx, fp, off_op0);
+        println!("ap_plus_off_op0: {:?}", ap_plus_off_op0);
+        println!("fp_plus_off_op0: {:?}", fp_plus_off_op0);
+        println!("op0_reg: {:?}", op0_reg);
         let op0_0 = self.read_memory(ctx, memory, ap_plus_off_op0);
         let op_0_1 = self.read_memory(ctx, memory, fp_plus_off_op0);
         let op0 = self.range_chip.gate().select(ctx, op_0_1, op0_0, op0_reg);
+        println!("op0: {:?}", op0);
         op0
     }
 
@@ -588,6 +592,7 @@ impl<F: ScalarField, const MAX_CPU_CYCLES: usize> CairoVM<F, MAX_CPU_CYCLES>
             .gate()
             .select_from_idx(ctx, memory.iter().copied(), pc);
         let decoded_instruction = self.decode_instruction(ctx, instruction);
+        println!("decoded_instruction: {:?}", decoded_instruction);
         let op0 = self.compute_op0(
             ctx,
             memory,
@@ -596,6 +601,7 @@ impl<F: ScalarField, const MAX_CPU_CYCLES: usize> CairoVM<F, MAX_CPU_CYCLES>
             fp,
             decoded_instruction.off_op0,
         );
+        println!("op0: {:?}", op0.value());
         let (op1, instruction_size) = self.compute_op1_and_instruction_size(
             ctx,
             memory,

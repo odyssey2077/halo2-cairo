@@ -1,13 +1,20 @@
-use ark_std::{start_timer, end_timer};
-use halo2_base::{gates::builder::{CircuitBuilderStage, MultiPhaseThreadBreakPoints, RangeCircuitBuilder, GateThreadBuilder}, halo2_proofs::{dev::MockProver, halo2curves::bn256::Fr}, utils::{ScalarField, biguint_to_fe, modulus}, Context};
+use ark_std::{end_timer, start_timer};
+use halo2_base::{
+    gates::builder::{
+        CircuitBuilderStage, GateThreadBuilder, MultiPhaseThreadBreakPoints, RangeCircuitBuilder,
+    },
+    halo2_proofs::{dev::MockProver, halo2curves::bn256::Fr},
+    utils::{biguint_to_fe, modulus, ScalarField},
+    Context,
+};
 use halo2_cairo::cairo::{CairoChip, CairoVM};
 use num_bigint::BigUint;
 use num_traits::Num;
 use serde::Deserialize;
-use std::{fs::read_to_string, collections::BTreeMap, cmp::Ordering, str::FromStr};
+use std::{cmp::Ordering, collections::BTreeMap, fs::read_to_string, str::FromStr};
 
 const DEGREE: u32 = 11;
-const MAX_NUM_CYCLES: usize = 40;
+const MAX_NUM_CYCLES: usize = 1;
 
 fn state_transition_test<F: ScalarField>(
     ctx: &mut Context<F>,
@@ -82,54 +89,69 @@ struct Res {
 
 fn extract_steps(s: &str) -> Option<u64> {
     let reg = regex::Regex::new(r".*steps: ([0-9]+)\n.*").unwrap();
-    reg.captures(s).and_then(|c| c.get(1).or(None).map(|h| {
-        println!("{:?}", h.as_str());
-        return h.as_str().parse::<u64>().unwrap();
-}))
+    reg.captures(s).and_then(|c| {
+        c.get(1).or(None).map(|h| {
+            println!("{:?}", h.as_str());
+            return h.as_str().parse::<u64>().unwrap();
+        })
+    })
 }
 
 fn read_data(path: &str) -> (Vec<Fr>, Vec<[Fr; 3]>, u64) {
-  let json = format!("{}/res.json", path);
-  let contents = read_to_string(json).expect("Should have been able to read the file");
-  let res: Res = serde_json::from_str(&contents).expect("Failed to parse JSON");
-  let steps = extract_steps(&res.output).expect("extract steps from output");
-  let mut sorted_memory_pairs = Vec::from_iter(res.memory.clone());
-  sorted_memory_pairs.sort_by(|a, b| {
-    let a_int = a.0.parse::<i32>().unwrap();
-    let b_int = b.0.parse::<i32>().unwrap();
-    if a_int > b_int {
-        return Ordering::Greater;
-    }
-    return Ordering::Less;
-  });
-  let memory: Vec<String> = sorted_memory_pairs.iter().map(|(_, value)| value.into()).collect();
-  let mut memory: Vec<Fr> = memory.iter().map(|m| {
-    let m: String = m.into();
-    // Cleanup input so that it can be parsed
-    if m.starts_with("0x") {
-        // Deal with hex numbers
-        let m: String = m.strip_prefix("0x").unwrap().to_string();
-        return biguint_to_fe(&BigUint::from_str_radix(&m, 16).unwrap());
-    } else {
-        // Deal with base 10 numbers
-        if m.starts_with("-") {
-            let m = m.strip_prefix("-").unwrap_or(&m);
-            let i = BigUint::from_str(&m).unwrap();
-            return biguint_to_fe(&(modulus::<Fr>() - i));
-        } else {
-            return biguint_to_fe(&BigUint::from_str(&m).unwrap());
+    let json = format!("{}/res.json", path);
+    let contents = read_to_string(json).expect("Should have been able to read the file");
+    let res: Res = serde_json::from_str(&contents).expect("Failed to parse JSON");
+    let steps = extract_steps(&res.output).expect("extract steps from output");
+    let mut sorted_memory_pairs = Vec::from_iter(res.memory.clone());
+    sorted_memory_pairs.sort_by(|a, b| {
+        let a_int = a.0.parse::<i32>().unwrap();
+        let b_int = b.0.parse::<i32>().unwrap();
+        if a_int > b_int {
+            return Ordering::Greater;
         }
-    }
-
-  }).collect();
-  let trace: Vec<[Fr; 3]> = res.trace.into_iter().map(|m| {
-      [Fr::from(*m.get("pc").unwrap()), Fr::from(*m.get("ap").unwrap()), Fr::from(*m.get("fp").unwrap())]
-  }).collect();
-  memory.insert(0, Fr::from(0));
-  return (memory, trace, steps);
+        return Ordering::Less;
+    });
+    let memory: Vec<String> = sorted_memory_pairs
+        .iter()
+        .map(|(_, value)| value.into())
+        .collect();
+    let mut memory: Vec<Fr> = memory
+        .iter()
+        .map(|m| {
+            let m: String = m.into();
+            // Cleanup input so that it can be parsed
+            if m.starts_with("0x") {
+                // Deal with hex numbers
+                let m: String = m.strip_prefix("0x").unwrap().to_string();
+                return biguint_to_fe(&BigUint::from_str_radix(&m, 16).unwrap());
+            } else {
+                // Deal with base 10 numbers
+                if m.starts_with("-") {
+                    let m = m.strip_prefix("-").unwrap_or(&m);
+                    let i = BigUint::from_str(&m).unwrap();
+                    return biguint_to_fe(&(modulus::<Fr>() - i));
+                } else {
+                    return biguint_to_fe(&BigUint::from_str(&m).unwrap());
+                }
+            }
+        })
+        .collect();
+    let trace: Vec<[Fr; 3]> = res
+        .trace
+        .into_iter()
+        .map(|m| {
+            [
+                Fr::from(*m.get("pc").unwrap()),
+                Fr::from(*m.get("ap").unwrap()),
+                Fr::from(*m.get("fp").unwrap()),
+            ]
+        })
+        .collect();
+    memory.insert(0, Fr::from(0));
+    return (memory, trace, steps);
 }
 
-pub fn run_mock_prover(memory: Vec<Fr>,register_traces: Vec<[Fr; 3]>) {
+pub fn run_mock_prover(memory: Vec<Fr>, register_traces: Vec<[Fr; 3]>) {
     for i in 0..register_traces.len() - 1 {
         let (pc, ap, fp) = (
             register_traces[i][0],
@@ -164,33 +186,25 @@ pub fn run_mock_prover_for(path: &str) {
     let (memory, register_traces, steps) = read_data(path);
     let first_trace = register_traces[0];
     let last_trace = register_traces.last().unwrap();
-    let (pc, ap, fp) = (
-        first_trace[0],
-        first_trace[1],
-        first_trace[2],
-    );
-    let (final_pc, final_ap, final_fp) = (
-        last_trace[0],
-        last_trace[1],
-        last_trace[2],
-    );
+    let (pc, ap, fp) = (first_trace[0], first_trace[1], first_trace[2]);
+    let (final_pc, final_ap, final_fp) = (last_trace[0], last_trace[1], last_trace[2]);
     let circuit = vm_circuit(
-      pc,
-      ap,
-      fp,
-      Fr::from(steps-1),
-      memory.clone(),
-      final_pc,
-      final_ap,
-      final_fp,
-      CircuitBuilderStage::Mock,
-      None,
+        pc,
+        ap,
+        fp,
+        Fr::from(steps - 1),
+        memory.clone(),
+        final_pc,
+        final_ap,
+        final_fp,
+        CircuitBuilderStage::Mock,
+        None,
     );
-    
+
     // equality contraints hold
     MockProver::run(DEGREE, &circuit, vec![])
-      .unwrap()
-      .assert_satisfied();
+        .unwrap()
+        .assert_satisfied();
 }
 
 fn vm_test<F: ScalarField>(

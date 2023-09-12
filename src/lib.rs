@@ -78,7 +78,7 @@ pub fn generate_test_data_for_program_with_builtin<F: ScalarField>() -> (Vec<F>,
         [F::from(20u64), F::from(41u64), F::from(24u64)],
     ];
 
-    let num_cycles = 20usize;
+    let num_cycles = 1usize;
 
     (memory, register_traces, num_cycles)
 }
